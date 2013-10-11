@@ -65,6 +65,31 @@ describe('ol.extent', function() {
     });
   });
 
+  describe('getCorner', function() {
+    var extent = [1, 2, 3, 4];
+
+    it('gets the bottom left', function() {
+      var corner = ol.extent.Corner.BOTTOM_LEFT;
+      expect(ol.extent.getCorner(extent, corner)).to.eql([1, 2]);
+    });
+
+    it('gets the bottom right', function() {
+      var corner = ol.extent.Corner.BOTTOM_RIGHT;
+      expect(ol.extent.getCorner(extent, corner)).to.eql([3, 2]);
+    });
+
+    it('gets the top left', function() {
+      var corner = ol.extent.Corner.TOP_LEFT;
+      expect(ol.extent.getCorner(extent, corner)).to.eql([1, 4]);
+    });
+
+    it('gets the top right', function() {
+      var corner = ol.extent.Corner.TOP_RIGHT;
+      expect(ol.extent.getCorner(extent, corner)).to.eql([3, 4]);
+    });
+
+  });
+
   describe('getForView2DAndSize', function() {
 
     it('works for a unit square', function() {
@@ -258,4 +283,5 @@ describe('ol.extent', function() {
 
 
 goog.require('ol.extent');
+goog.require('ol.extent.Corner');
 goog.require('ol.proj');
