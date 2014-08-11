@@ -2,16 +2,48 @@
 
 goog.provide('ol.interaction.Interaction');
 
+goog.require('goog.asserts');
 goog.require('ol.MapBrowserEvent');
+goog.require('ol.Observable');
 goog.require('ol.animation');
 goog.require('ol.easing');
 
 
 
 /**
+ * @classdesc
+ * Abstract base class; normally only used for creating subclasses and not
+ * instantiated in apps.
+ * User actions that change the state of the map. Some are similar to controls,
+ * but are not associated with a DOM element.
+ * For example, {@link ol.interaction.KeyboardZoom} is functionally the same as
+ * {@link ol.control.Zoom}, but triggered by a keyboard event not a button
+ * element event.
+ * Although interactions do not have a DOM element, some of them do render
+ * vectors and so are visible on the screen.
+ *
  * @constructor
+ * @extends {ol.Observable}
  */
 ol.interaction.Interaction = function() {
+  goog.base(this);
+
+  /**
+   * @private
+   * @type {ol.Map}
+   */
+  this.map_ = null;
+
+};
+goog.inherits(ol.interaction.Interaction, ol.Observable);
+
+
+/**
+ * Get the map associated with this interaction.
+ * @return {ol.Map} Map.
+ */
+ol.interaction.Interaction.prototype.getMap = function() {
+  return this.map_;
 };
 
 
@@ -26,13 +58,23 @@ ol.interaction.Interaction.prototype.handleMapBrowserEvent =
 
 
 /**
+ * Remove the interaction from its current map and attach it to the new map.
+ * Subclasses may set up event handlers to get notified about changes to
+ * the map here.
  * @param {ol.Map} map Map.
- * @param {ol.View2D} view View.
+ */
+ol.interaction.Interaction.prototype.setMap = function(map) {
+  this.map_ = map;
+};
+
+
+/**
+ * @param {ol.Map} map Map.
+ * @param {ol.View} view View.
  * @param {ol.Coordinate} delta Delta.
  * @param {number=} opt_duration Duration.
  */
-ol.interaction.Interaction.pan = function(
-    map, view, delta, opt_duration) {
+ol.interaction.Interaction.pan = function(map, view, delta, opt_duration) {
   var currentCenter = view.getCenter();
   if (goog.isDef(currentCenter)) {
     if (goog.isDef(opt_duration) && opt_duration > 0) {
@@ -51,7 +93,7 @@ ol.interaction.Interaction.pan = function(
 
 /**
  * @param {ol.Map} map Map.
- * @param {ol.View2D} view View.
+ * @param {ol.View} view View.
  * @param {number|undefined} rotation Rotation.
  * @param {ol.Coordinate=} opt_anchor Anchor coordinate.
  * @param {number=} opt_duration Duration.
@@ -66,7 +108,7 @@ ol.interaction.Interaction.rotate =
 
 /**
  * @param {ol.Map} map Map.
- * @param {ol.View2D} view View.
+ * @param {ol.View} view View.
  * @param {number|undefined} rotation Rotation.
  * @param {ol.Coordinate=} opt_anchor Anchor coordinate.
  * @param {number=} opt_duration Duration.
@@ -91,22 +133,14 @@ ol.interaction.Interaction.rotateWithoutConstraints =
         }));
       }
     }
-    if (goog.isDefAndNotNull(opt_anchor)) {
-      var center = view.calculateCenterRotate(rotation, opt_anchor);
-      map.withFrozenRendering(function() {
-        view.setCenter(center);
-        view.setRotation(rotation);
-      });
-    } else {
-      view.setRotation(rotation);
-    }
+    view.rotate(rotation, opt_anchor);
   }
 };
 
 
 /**
  * @param {ol.Map} map Map.
- * @param {ol.View2D} view View.
+ * @param {ol.View} view View.
  * @param {number|undefined} resolution Resolution to go to.
  * @param {ol.Coordinate=} opt_anchor Anchor coordinate.
  * @param {number=} opt_duration Duration.
@@ -129,7 +163,7 @@ ol.interaction.Interaction.zoom =
 
 /**
  * @param {ol.Map} map Map.
- * @param {ol.View2D} view View.
+ * @param {ol.View} view View.
  * @param {number} delta Delta from previous zoom level.
  * @param {ol.Coordinate=} opt_anchor Anchor coordinate.
  * @param {number=} opt_duration Duration.
@@ -145,7 +179,7 @@ ol.interaction.Interaction.zoomByDelta =
 
 /**
  * @param {ol.Map} map Map.
- * @param {ol.View2D} view View.
+ * @param {ol.View} view View.
  * @param {number|undefined} resolution Resolution to go to.
  * @param {ol.Coordinate=} opt_anchor Anchor coordinate.
  * @param {number=} opt_duration Duration.
@@ -172,12 +206,8 @@ ol.interaction.Interaction.zoomWithoutConstraints =
     }
     if (goog.isDefAndNotNull(opt_anchor)) {
       var center = view.calculateCenterZoom(resolution, opt_anchor);
-      map.withFrozenRendering(function() {
-        view.setCenter(center);
-        view.setResolution(resolution);
-      });
-    } else {
-      view.setResolution(resolution);
+      view.setCenter(center);
     }
+    view.setResolution(resolution);
   }
 };

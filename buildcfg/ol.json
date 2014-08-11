@@ -1,40 +1,64 @@
 {
-
-  "id": "ol",
-
-  "css-allowed-unrecognized-properties": [
-    "user-select"
-  ],
-
-  "css-inputs": [
-    "../css/ol.css"
-  ],
-
-  "css-output-file": "../build/ol.css",
-
-  "externs": [
-    "//json.js",
-    "../build/src/external/externs/types.js",
-    "../externs/bingmaps.js",
-    "../externs/geojson.js",
-    "../externs/topojson.js",
-    "../externs/oli.js",
-    "../externs/proj4js.js",
-    "../externs/tilejson.js",
-    "../externs/closure-compiler.js"
-  ],
-
-  "inherits": "base.json",
-
-  "inputs": [
-    "../build/src/external/src/exports.js",
-    "../build/src/external/src/types.js"
-  ],
-
-  "output-wrapper": "(function(){%output%})();",
-
-  "paths": [
-    "../src"
-  ]
-
+  "exports": ["*"],
+  "compile": {
+    "externs": [
+      "externs/bingmaps.js",
+      "externs/closure-compiler.js",
+      "externs/geojson.js",
+      "externs/oli.js",
+      "externs/olx.js",
+      "externs/proj4js.js",
+      "externs/tilejson.js",
+      "externs/topojson.js",
+      "externs/vbarray.js"
+    ],
+    "define": [
+      "goog.dom.ASSUME_STANDARDS_MODE=true",
+      "goog.json.USE_NATIVE_JSON=true",
+      "goog.DEBUG=false"
+    ],
+    "jscomp_error": [
+      "accessControls",
+      "ambiguousFunctionDecl",
+      "checkEventfulObjectDisposal",
+      "checkRegExp",
+      "checkStructDictInheritance",
+      "checkTypes",
+      "checkVars",
+      "const",
+      "constantProperty",
+      "deprecated",
+      "duplicateMessage",
+      "es3",
+      "es5Strict",
+      "externsValidation",
+      "fileoverviewTags",
+      "globalThis",
+      "internetExplorerChecks",
+      "invalidCasts",
+      "misplacedTypeAnnotation",
+      "missingGetCssName",
+      "missingProperties",
+      "missingProvide",
+      "missingRequire",
+      "missingReturn",
+      "newCheckTypes",
+      "nonStandardJsDocs",
+      "suspiciousCode",
+      "strictModuleDepCheck",
+      "typeInvalidation",
+      "undefinedNames",
+      "undefinedVars",
+      "unknownDefines",
+      "uselessCode",
+      "visibility"
+    ],
+    "extra_annotation_name": [
+      "api", "observable"
+    ],
+    "compilation_level": "ADVANCED",
+    "output_wrapper": "(function(){%output%})();",
+    "use_types_for_optimization": true,
+    "manage_closure_dependencies": true
+  }
 }

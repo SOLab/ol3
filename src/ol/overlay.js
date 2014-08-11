@@ -19,13 +19,18 @@ goog.require('ol.Object');
 ol.OverlayProperty = {
   ELEMENT: 'element',
   MAP: 'map',
+  OFFSET: 'offset',
   POSITION: 'position',
   POSITIONING: 'positioning'
 };
 
 
 /**
+ * Overlay position: `'bottom-left'`, `'bottom-center'`,  `'bottom-right'`,
+ * `'center-left'`, `'center-center'`, `'center-right'`, `'top-left'`,
+ * `'top-center'`, `'top-right'`
  * @enum {string}
+ * @api
  */
 ol.OverlayPositioning = {
   BOTTOM_LEFT: 'bottom-left',
@@ -42,7 +47,11 @@ ol.OverlayPositioning = {
 
 
 /**
- * An element to show on top of the map, such as for a popup.
+ * @classdesc
+ * Like {@link ol.control.Control}, Overlays are visible widgets.
+ * Unlike Controls, they are not in a fixed position on the screen, but are tied
+ * to a geographical coordinate, so panning the map will move an Overlay but not
+ * a Control.
  *
  * Example:
  *
@@ -54,11 +63,25 @@ ol.OverlayPositioning = {
  *
  * @constructor
  * @extends {ol.Object}
- * @param {ol.OverlayOptions} options Overlay options.
+ * @param {olx.OverlayOptions} options Overlay options.
+ * @api stable
  */
 ol.Overlay = function(options) {
 
   goog.base(this);
+
+  /**
+   * @private
+   * @type {boolean}
+   */
+  this.insertFirst_ = goog.isDef(options.insertFirst) ?
+      options.insertFirst : true;
+
+  /**
+   * @private
+   * @type {boolean}
+   */
+  this.stopEvent_ = goog.isDef(options.stopEvent) ? options.stopEvent : true;
 
   /**
    * @private
@@ -98,6 +121,10 @@ ol.Overlay = function(options) {
       this.handleMapChanged, false, this);
 
   goog.events.listen(
+      this, ol.Object.getChangeEventType(ol.OverlayProperty.OFFSET),
+      this.handleOffsetChanged, false, this);
+
+  goog.events.listen(
       this, ol.Object.getChangeEventType(ol.OverlayProperty.POSITION),
       this.handlePositionChanged, false, this);
 
@@ -109,11 +136,15 @@ ol.Overlay = function(options) {
   if (goog.isDef(options.element)) {
     this.setElement(options.element);
   }
+
+  this.setOffset(goog.isDef(options.offset) ? options.offset : [0, 0]);
+
+  this.setPositioning(goog.isDef(options.positioning) ?
+      /** @type {ol.OverlayPositioning} */ (options.positioning) :
+      ol.OverlayPositioning.TOP_LEFT);
+
   if (goog.isDef(options.position)) {
     this.setPosition(options.position);
-  }
-  if (goog.isDef(options.positioning)) {
-    this.setPositioning(options.positioning);
   }
 
 };
@@ -122,7 +153,9 @@ goog.inherits(ol.Overlay, ol.Object);
 
 /**
  * Get the DOM element of this overlay.
- * @return {Element|undefined} Element.
+ * @return {Element|undefined} The Element containing the overlay.
+ * @observable
+ * @api
  */
 ol.Overlay.prototype.getElement = function() {
   return /** @type {Element|undefined} */ (
@@ -136,7 +169,9 @@ goog.exportProperty(
 
 /**
  * Get the map associated with this overlay.
- * @return {ol.Map|undefined} Map.
+ * @return {ol.Map|undefined} The map that the overlay is part of.
+ * @observable
+ * @api
  */
 ol.Overlay.prototype.getMap = function() {
   return /** @type {ol.Map|undefined} */ (
@@ -149,8 +184,27 @@ goog.exportProperty(
 
 
 /**
+ * Get the offset of this overlay.
+ * @return {Array.<number>} The offset.
+ * @observable
+ * @api
+ */
+ol.Overlay.prototype.getOffset = function() {
+  return /** @type {Array.<number>} */ (
+      this.get(ol.OverlayProperty.OFFSET));
+};
+goog.exportProperty(
+    ol.Overlay.prototype,
+    'getOffset',
+    ol.Overlay.prototype.getOffset);
+
+
+/**
  * Get the current position of this overlay.
- * @return {ol.Coordinate|undefined} Position.
+ * @return {ol.Coordinate|undefined} The spatial point that the overlay is
+ *     anchored at.
+ * @observable
+ * @api
  */
 ol.Overlay.prototype.getPosition = function() {
   return /** @type {ol.Coordinate|undefined} */ (
@@ -164,10 +218,13 @@ goog.exportProperty(
 
 /**
  * Get the current positioning of this overlay.
- * @return {ol.OverlayPositioning|undefined} Positioning.
+ * @return {ol.OverlayPositioning} How the overlay is positioned
+ *     relative to its point on the map.
+ * @observable
+ * @api
  */
 ol.Overlay.prototype.getPositioning = function() {
-  return /** @type {ol.OverlayPositioning|undefined} */ (
+  return /** @type {ol.OverlayPositioning} */ (
       this.get(ol.OverlayProperty.POSITIONING));
 };
 goog.exportProperty(
@@ -202,8 +259,14 @@ ol.Overlay.prototype.handleMapChanged = function() {
     this.mapPostrenderListenerKey_ = goog.events.listen(map,
         ol.MapEventType.POSTRENDER, this.handleMapPostrender, false, this);
     this.updatePixelPosition_();
-    goog.dom.append(
-        /** @type {!Node} */ (map.getOverlayContainer()), this.element_);
+    var container = this.stopEvent_ ?
+        map.getOverlayContainerStopEvent() : map.getOverlayContainer();
+    if (this.insertFirst_) {
+      goog.dom.insertChildAt(/** @type {!Element} */ (
+          container), this.element_, 0);
+    } else {
+      goog.dom.append(/** @type {!Node} */ (container), this.element_);
+    }
   }
 };
 
@@ -212,6 +275,14 @@ ol.Overlay.prototype.handleMapChanged = function() {
  * @protected
  */
 ol.Overlay.prototype.handleMapPostrender = function() {
+  this.updatePixelPosition_();
+};
+
+
+/**
+ * @protected
+ */
+ol.Overlay.prototype.handleOffsetChanged = function() {
   this.updatePixelPosition_();
 };
 
@@ -234,7 +305,9 @@ ol.Overlay.prototype.handlePositioningChanged = function() {
 
 /**
  * Set the DOM element to be associated with this overlay.
- * @param {Element|undefined} element Element.
+ * @param {Element|undefined} element The Element containing the overlay.
+ * @observable
+ * @api
  */
 ol.Overlay.prototype.setElement = function(element) {
   this.set(ol.OverlayProperty.ELEMENT, element);
@@ -247,7 +320,9 @@ goog.exportProperty(
 
 /**
  * Set the map to be associated with this overlay.
- * @param {ol.Map|undefined} map Map.
+ * @param {ol.Map|undefined} map The map that the overlay is part of.
+ * @observable
+ * @api
  */
 ol.Overlay.prototype.setMap = function(map) {
   this.set(ol.OverlayProperty.MAP, map);
@@ -259,8 +334,26 @@ goog.exportProperty(
 
 
 /**
+ * Set the offset for this overlay.
+ * @param {Array.<number>} offset Offset.
+ * @observable
+ * @api
+ */
+ol.Overlay.prototype.setOffset = function(offset) {
+  this.set(ol.OverlayProperty.OFFSET, offset);
+};
+goog.exportProperty(
+    ol.Overlay.prototype,
+    'setOffset',
+    ol.Overlay.prototype.setOffset);
+
+
+/**
  * Set the position for this overlay.
- * @param {ol.Coordinate|undefined} position Position.
+ * @param {ol.Coordinate|undefined} position The spatial point that the overlay
+ *     is anchored at.
+ * @observable
+ * @api stable
  */
 ol.Overlay.prototype.setPosition = function(position) {
   this.set(ol.OverlayProperty.POSITION, position);
@@ -272,11 +365,19 @@ goog.exportProperty(
 
 
 /**
- * @param {ol.OverlayPositioning|undefined} positioning Positioning.
+ * Set the positioning for this overlay.
+ * @param {ol.OverlayPositioning} positioning how the overlay is
+ *     positioned relative to its point on the map.
+ * @observable
+ * @api
  */
 ol.Overlay.prototype.setPositioning = function(positioning) {
   this.set(ol.OverlayProperty.POSITIONING, positioning);
 };
+goog.exportProperty(
+    ol.Overlay.prototype,
+    'setPositioning',
+    ol.Overlay.prototype.setPositioning);
 
 
 /**
@@ -286,7 +387,7 @@ ol.Overlay.prototype.updatePixelPosition_ = function() {
 
   var map = this.getMap();
   var position = this.getPosition();
-  if (!goog.isDef(map) || !map.isDef() || !goog.isDef(position)) {
+  if (!goog.isDef(map) || !map.isRendered() || !goog.isDef(position)) {
     if (this.rendered_.visible) {
       goog.style.setElementShown(this.element_, false);
       this.rendered_.visible = false;
@@ -295,10 +396,15 @@ ol.Overlay.prototype.updatePixelPosition_ = function() {
   }
 
   var pixel = map.getPixelFromCoordinate(position);
+  goog.asserts.assert(!goog.isNull(pixel));
   var mapSize = map.getSize();
   goog.asserts.assert(goog.isDef(mapSize));
   var style = this.element_.style;
+  var offset = this.getOffset();
+  goog.asserts.assert(goog.isArray(offset));
   var positioning = this.getPositioning();
+  goog.asserts.assert(goog.isDef(positioning));
+
   if (positioning == ol.OverlayPositioning.BOTTOM_RIGHT ||
       positioning == ol.OverlayPositioning.CENTER_RIGHT ||
       positioning == ol.OverlayPositioning.TOP_RIGHT) {
@@ -313,11 +419,11 @@ ol.Overlay.prototype.updatePixelPosition_ = function() {
     if (this.rendered_.right_ !== '') {
       this.rendered_.right_ = style.right = '';
     }
-    var offsetX = 0;
+    var offsetX = -offset[0];
     if (positioning == ol.OverlayPositioning.BOTTOM_CENTER ||
         positioning == ol.OverlayPositioning.CENTER_CENTER ||
         positioning == ol.OverlayPositioning.TOP_CENTER) {
-      offsetX = goog.style.getSize(this.element_).width / 2;
+      offsetX += goog.style.getSize(this.element_).width / 2;
     }
     var left = Math.round(pixel[0] - offsetX) + 'px';
     if (this.rendered_.left_ != left) {
@@ -338,11 +444,11 @@ ol.Overlay.prototype.updatePixelPosition_ = function() {
     if (this.rendered_.bottom_ !== '') {
       this.rendered_.bottom_ = style.bottom = '';
     }
-    var offsetY = 0;
+    var offsetY = -offset[1];
     if (positioning == ol.OverlayPositioning.CENTER_LEFT ||
         positioning == ol.OverlayPositioning.CENTER_CENTER ||
         positioning == ol.OverlayPositioning.CENTER_RIGHT) {
-      offsetY = goog.style.getSize(this.element_).height / 2;
+      offsetY += goog.style.getSize(this.element_).height / 2;
     }
     var top = Math.round(pixel[1] - offsetY) + 'px';
     if (this.rendered_.top_ != top) {

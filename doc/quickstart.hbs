@@ -13,7 +13,7 @@ Below you'll find a complete working example.  Create a new file, copy in the co
 <!doctype html>
 <html lang="en">
   <head>
-    <link rel="stylesheet" href="http://ol3js.org/en/{{ latest }}/build/ol.css" type="text/css">
+    <link rel="stylesheet" href="http://ol3js.org/en/{{ latest }}/css/ol.css" type="text/css">
     <style>
       .map {
         height: 400px;
@@ -31,10 +31,10 @@ Below you'll find a complete working example.  Create a new file, copy in the co
         target: 'map',
         layers: [
           new ol.layer.Tile({
-            source: new ol.source.MapQuestOpenAerial()
+            source: new ol.source.MapQuest({layer: 'sat'})
           })
         ],
-        view: new ol.View2D({
+        view: new ol.View({
           center: ol.proj.transform([37.41, 8.82], 'EPSG:4326', 'EPSG:3857'),
           zoom: 4
         })
@@ -72,7 +72,8 @@ The map in the application is contained in a [`<div>` HTML element](http://en.wi
 ```xml
   <style>
     .map {
-      height: 400px; width: 100%;
+      height: 400px;
+      width: 100%;
     }
   </style>
 ```
@@ -84,10 +85,10 @@ The map in the application is contained in a [`<div>` HTML element](http://en.wi
     target: 'map',
     layers: [
       new ol.layer.Tile({
-        source: new ol.source.MapQuestOpenAerial()
+        source: new ol.source.MapQuest({layer: 'sat'})
       })
     ],
-    view: new ol.View2D({
+    view: new ol.View({
       center: ol.proj.transform([37.41, 8.82], 'EPSG:4326', 'EPSG:3857'),
       zoom: 4
     })
@@ -113,17 +114,17 @@ The `layers: [ ... ]` array is used to define the list of layers available in th
 ```js
     layers: [
       new ol.layer.Tile({
-        source: new ol.source.MapQuestOpenAerial()
+        source: new ol.source.MapQuest({layer: 'sat'})
       })
     ]
 ```
 
 Layers in OpenLayers 3 are defined with a type (Image, Tile or Vector) which contains a source. The source is the protocol used to get the map tiles. You can consult the list of [available layer sources here](/en/{{ latest }}/apidoc/ol.source.html)
 
-The next part of the `Map` object is the `View`. The view allow to specify the center, resolution, and rotation of the map. Right now, only `View2D` is supported, but other views should be available at some point. The simplest way to define a view is to define a center point and a zoom level. Note that zoom level 0 is zoomed out.
+The next part of the `Map` object is the `View`. The view allow to specify the center, resolution, and rotation of the map. The simplest way to define a view is to define a center point and a zoom level.  Note that zoom level 0 is zoomed out.
 
 ```js
-    view: new ol.View2D({
+    view: new ol.View({
       center: ol.proj.transform([37.41, 8.82], 'EPSG:4326', 'EPSG:3857'),
       zoom: 4
     })

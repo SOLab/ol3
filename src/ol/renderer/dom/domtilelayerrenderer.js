@@ -10,17 +10,20 @@ goog.require('goog.dom.TagName');
 goog.require('goog.object');
 goog.require('goog.style');
 goog.require('goog.vec.Mat4');
+goog.require('ol');
 goog.require('ol.Coordinate');
-goog.require('ol.Tile');
 goog.require('ol.TileCoord');
 goog.require('ol.TileRange');
 goog.require('ol.TileState');
 goog.require('ol.ViewHint');
 goog.require('ol.dom');
+goog.require('ol.dom.BrowserFeature');
 goog.require('ol.extent');
 goog.require('ol.layer.Tile');
 goog.require('ol.renderer.dom.Layer');
+goog.require('ol.source.Tile');
 goog.require('ol.tilegrid.TileGrid');
+goog.require('ol.vec.Mat4');
 
 
 
@@ -34,6 +37,12 @@ ol.renderer.dom.TileLayer = function(mapRenderer, tileLayer) {
 
   var target = goog.dom.createElement(goog.dom.TagName.DIV);
   target.style.position = 'absolute';
+
+  // Needed for IE7-8 to render a transformed element correctly
+  if (ol.dom.BrowserFeature.USE_MS_MATRIX_TRANSFORM) {
+    target.style.width = '100%';
+    target.style.height = '100%';
+  }
 
   goog.base(this, mapRenderer, tileLayer, target);
 
@@ -66,18 +75,9 @@ goog.inherits(ol.renderer.dom.TileLayer, ol.renderer.dom.Layer);
 
 
 /**
- * @protected
- * @return {ol.layer.Tile} Tile layer.
- */
-ol.renderer.dom.TileLayer.prototype.getTileLayer = function() {
-  return /** @type {ol.layer.Tile} */ (this.getLayer());
-};
-
-
-/**
  * @inheritDoc
  */
-ol.renderer.dom.TileLayer.prototype.renderFrame =
+ol.renderer.dom.TileLayer.prototype.prepareFrame =
     function(frameState, layerState) {
 
   if (!layerState.visible) {
@@ -88,26 +88,32 @@ ol.renderer.dom.TileLayer.prototype.renderFrame =
     return;
   }
 
-  var view2DState = frameState.view2DState;
-  var projection = view2DState.projection;
+  var pixelRatio = frameState.pixelRatio;
+  var viewState = frameState.viewState;
+  var projection = viewState.projection;
 
-  var tileLayer = this.getTileLayer();
-  var tileSource = tileLayer.getTileSource();
-  var tileGrid = tileSource.getTileGrid();
-  if (goog.isNull(tileGrid)) {
-    tileGrid = ol.tilegrid.getForProjection(projection);
-  }
-  var z = tileGrid.getZForResolution(view2DState.resolution);
+  var tileLayer = this.getLayer();
+  goog.asserts.assertInstanceof(tileLayer, ol.layer.Tile);
+  var tileSource = tileLayer.getSource();
+  goog.asserts.assertInstanceof(tileSource, ol.source.Tile);
+  var tileGrid = tileSource.getTileGridForProjection(projection);
+  var tileGutter = tileSource.getGutter();
+  var z = tileGrid.getZForResolution(viewState.resolution);
   var tileResolution = tileGrid.getResolution(z);
-  var center = view2DState.center;
+  var center = viewState.center;
   var extent;
-  if (tileResolution == view2DState.resolution) {
+  if (tileResolution == viewState.resolution) {
     center = this.snapCenterToPixel(center, tileResolution, frameState.size);
-    extent = ol.extent.getForView2DAndSize(
-        center, tileResolution, view2DState.rotation, frameState.size);
+    extent = ol.extent.getForViewAndSize(
+        center, tileResolution, viewState.rotation, frameState.size);
   } else {
     extent = frameState.extent;
   }
+
+  if (goog.isDef(layerState.extent)) {
+    extent = ol.extent.getIntersection(extent, layerState.extent);
+  }
+
   var tileRange = tileGrid.getTileRangeForExtentAndResolution(
       extent, tileResolution);
 
@@ -117,9 +123,14 @@ ol.renderer.dom.TileLayer.prototype.renderFrame =
 
   var getTileIfLoaded = this.createGetTileIfLoadedFunction(function(tile) {
     return !goog.isNull(tile) && tile.getState() == ol.TileState.LOADED;
-  }, tileSource, projection);
+  }, tileSource, pixelRatio, projection);
   var findLoadedTiles = goog.bind(tileSource.findLoadedTiles, tileSource,
       tilesToDrawByZ, getTileIfLoaded);
+
+  var useInterimTilesOnError = tileLayer.getUseInterimTilesOnError();
+  if (!goog.isDef(useInterimTilesOnError)) {
+    useInterimTilesOnError = true;
+  }
 
   var tmpExtent = ol.extent.createEmpty();
   var tmpTileRange = new ol.TileRange(0, 0, 0, 0);
@@ -127,13 +138,14 @@ ol.renderer.dom.TileLayer.prototype.renderFrame =
   for (x = tileRange.minX; x <= tileRange.maxX; ++x) {
     for (y = tileRange.minY; y <= tileRange.maxY; ++y) {
 
-      tile = tileSource.getTile(z, x, y, projection);
+      tile = tileSource.getTile(z, x, y, pixelRatio, projection);
       tileState = tile.getState();
       if (tileState == ol.TileState.LOADED) {
         tilesToDrawByZ[z][tile.tileCoord.toString()] = tile;
         continue;
-      } else if (tileState == ol.TileState.ERROR ||
-                 tileState == ol.TileState.EMPTY) {
+      } else if (tileState == ol.TileState.EMPTY ||
+                 (tileState == ol.TileState.ERROR &&
+                  !useInterimTilesOnError)) {
         continue;
       }
 
@@ -185,7 +197,7 @@ ol.renderer.dom.TileLayer.prototype.renderFrame =
     }
     tilesToDraw = tilesToDrawByZ[tileLayerZKey];
     for (tileCoordKey in tilesToDraw) {
-      tileLayerZ.addTile(tilesToDraw[tileCoordKey]);
+      tileLayerZ.addTile(tilesToDraw[tileCoordKey], tileGutter);
     }
     tileLayerZ.finalizeAddTiles();
   }
@@ -207,17 +219,13 @@ ol.renderer.dom.TileLayer.prototype.renderFrame =
     }
     resolution = tileLayerZ.getResolution();
     origin = tileLayerZ.getOrigin();
-    goog.vec.Mat4.makeIdentity(transform);
-    goog.vec.Mat4.translate(
-        transform, frameState.size[0] / 2, frameState.size[1] / 2, 0);
-    goog.vec.Mat4.rotateZ(transform, view2DState.rotation);
-    goog.vec.Mat4.scale(transform, resolution / view2DState.resolution,
-        resolution / view2DState.resolution, 1);
-    goog.vec.Mat4.translate(
-        transform,
+    ol.vec.Mat4.makeTransform2D(transform,
+        frameState.size[0] / 2, frameState.size[1] / 2,
+        resolution / viewState.resolution,
+        resolution / viewState.resolution,
+        viewState.rotation,
         (origin[0] - center[0]) / resolution,
-        (center[1] - origin[1]) / resolution,
-        0);
+        (center[1] - origin[1]) / resolution);
     tileLayerZ.setTransform(transform);
     if (tileLayerZKey in newTileLayerZKeys) {
       for (j = tileLayerZKey - 1; j >= 0; --j) {
@@ -239,7 +247,7 @@ ol.renderer.dom.TileLayer.prototype.renderFrame =
   }
 
   if (layerState.opacity != this.renderedOpacity_) {
-    goog.style.setOpacity(this.target, layerState.opacity);
+    ol.dom.setOpacity(this.target, layerState.opacity);
     this.renderedOpacity_ = layerState.opacity;
   }
 
@@ -249,8 +257,8 @@ ol.renderer.dom.TileLayer.prototype.renderFrame =
   }
 
   this.updateUsedTiles(frameState.usedTiles, tileSource, z, tileRange);
-  this.manageTilePyramid(frameState, tileSource, tileGrid, projection, extent,
-      z, tileLayer.getPreload());
+  this.manageTilePyramid(frameState, tileSource, tileGrid, pixelRatio,
+      projection, extent, z, tileLayer.getPreload());
   this.scheduleExpireCache(frameState, tileSource);
   this.updateLogos(frameState, tileSource);
 
@@ -271,6 +279,23 @@ ol.renderer.dom.TileLayerZ_ = function(tileGrid, tileCoordOrigin) {
    */
   this.target = goog.dom.createElement(goog.dom.TagName.DIV);
   this.target.style.position = 'absolute';
+  this.target.style.width = '100%';
+  this.target.style.height = '100%';
+
+  if (ol.LEGACY_IE_SUPPORT && ol.IS_LEGACY_IE) {
+    /**
+     * Needed due to issues with IE7-8 clipping of transformed elements
+     * Solution is to translate separately from the scaled/rotated elements
+     * @private
+     * @type {!Element}
+     */
+    this.translateTarget_ = goog.dom.createElement(goog.dom.TagName.DIV);
+    this.translateTarget_.style.position = 'absolute';
+    this.translateTarget_.style.width = '100%';
+    this.translateTarget_.style.height = '100%';
+
+    goog.dom.appendChild(this.target, this.translateTarget_);
+  }
 
   /**
    * @private
@@ -311,7 +336,7 @@ ol.renderer.dom.TileLayerZ_ = function(tileGrid, tileCoordOrigin) {
 
   /**
    * @private
-   * @type {goog.vec.Mat4.AnyType}
+   * @type {goog.vec.Mat4.Number}
    */
   this.transform_ = goog.vec.Mat4.createNumberIdentity();
 
@@ -320,8 +345,9 @@ ol.renderer.dom.TileLayerZ_ = function(tileGrid, tileCoordOrigin) {
 
 /**
  * @param {ol.Tile} tile Tile.
+ * @param {number} tileGutter Tile gutter.
  */
-ol.renderer.dom.TileLayerZ_.prototype.addTile = function(tile) {
+ol.renderer.dom.TileLayerZ_.prototype.addTile = function(tile, tileGutter) {
   var tileCoord = tile.tileCoord;
   goog.asserts.assert(tileCoord.z == this.tileCoordOrigin_.z);
   var tileCoordKey = tileCoord.toString();
@@ -330,20 +356,40 @@ ol.renderer.dom.TileLayerZ_.prototype.addTile = function(tile) {
   }
   var tileSize = this.tileGrid_.getTileSize(tileCoord.z);
   var image = tile.getImage(this);
-  var style = image.style;
-  // Bootstrap sets the style max-width: 100% for all images, which breaks
-  // prevents the tile from being displayed in FireFox.  Workaround by
-  // overriding the max-width style.
-  style.maxWidth = 'none';
-  style.position = 'absolute';
-  style.left =
-      ((tileCoord.x - this.tileCoordOrigin_.x) * tileSize[0]) + 'px';
-  style.top =
-      ((this.tileCoordOrigin_.y - tileCoord.y) * tileSize[1]) + 'px';
+  var imageStyle = image.style;
+  // Bootstrap sets the style max-width: 100% for all images, which
+  // prevents the tile from being displayed in FireFox.  Workaround
+  // by overriding the max-width style.
+  imageStyle.maxWidth = 'none';
+  var tileElement;
+  var tileElementStyle;
+  if (tileGutter > 0) {
+    tileElement = goog.dom.createElement(goog.dom.TagName.DIV);
+    tileElementStyle = tileElement.style;
+    tileElementStyle.overflow = 'hidden';
+    tileElementStyle.width = tileSize + 'px';
+    tileElementStyle.height = tileSize + 'px';
+    imageStyle.position = 'absolute';
+    imageStyle.left = -tileGutter + 'px';
+    imageStyle.top = -tileGutter + 'px';
+    imageStyle.width = (tileSize + 2 * tileGutter) + 'px';
+    imageStyle.height = (tileSize + 2 * tileGutter) + 'px';
+    goog.dom.appendChild(tileElement, image);
+  } else {
+    imageStyle.width = tileSize + 'px';
+    imageStyle.height = tileSize + 'px';
+    tileElement = image;
+    tileElementStyle = imageStyle;
+  }
+  tileElementStyle.position = 'absolute';
+  tileElementStyle.left =
+      ((tileCoord.x - this.tileCoordOrigin_.x) * tileSize) + 'px';
+  tileElementStyle.top =
+      ((this.tileCoordOrigin_.y - tileCoord.y) * tileSize) + 'px';
   if (goog.isNull(this.documentFragment_)) {
     this.documentFragment_ = document.createDocumentFragment();
   }
-  goog.dom.appendChild(this.documentFragment_, image);
+  goog.dom.appendChild(this.documentFragment_, tileElement);
   this.tiles_[tileCoordKey] = tile;
 };
 
@@ -353,7 +399,11 @@ ol.renderer.dom.TileLayerZ_.prototype.addTile = function(tile) {
  */
 ol.renderer.dom.TileLayerZ_.prototype.finalizeAddTiles = function() {
   if (!goog.isNull(this.documentFragment_)) {
-    goog.dom.appendChild(this.target, this.documentFragment_);
+    if (ol.LEGACY_IE_SUPPORT && ol.IS_LEGACY_IE) {
+      goog.dom.appendChild(this.translateTarget_, this.documentFragment_);
+    } else {
+      goog.dom.appendChild(this.target, this.documentFragment_);
+    }
     this.documentFragment_ = null;
   }
 };
@@ -383,6 +433,7 @@ ol.renderer.dom.TileLayerZ_.prototype.removeTilesOutsideExtent =
     function(extent, opt_tileRange) {
   var tileRange = this.tileGrid_.getTileRangeForExtentAndZ(
       extent, this.tileCoordOrigin_.z, opt_tileRange);
+  /** @type {Array.<ol.Tile>} */
   var tilesToRemove = [];
   var tile, tileCoordKey;
   for (tileCoordKey in this.tiles_) {
@@ -402,11 +453,16 @@ ol.renderer.dom.TileLayerZ_.prototype.removeTilesOutsideExtent =
 
 
 /**
- * @param {goog.vec.Mat4.AnyType} transform Transform.
+ * @param {goog.vec.Mat4.Number} transform Transform.
  */
 ol.renderer.dom.TileLayerZ_.prototype.setTransform = function(transform) {
-  if (!goog.vec.Mat4.equals(transform, this.transform_)) {
-    ol.dom.transformElement2D(this.target, transform, 6);
+  if (!ol.vec.Mat4.equals2D(transform, this.transform_)) {
+    if (ol.LEGACY_IE_SUPPORT && ol.IS_LEGACY_IE) {
+      ol.dom.transformElement2D(this.target, transform, 6,
+          this.translateTarget_);
+    } else {
+      ol.dom.transformElement2D(this.target, transform, 6);
+    }
     goog.vec.Mat4.setFromArray(this.transform_, transform);
   }
 };

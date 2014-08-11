@@ -1,24 +1,24 @@
 goog.provide('ol.layer.Image');
 
 goog.require('ol.layer.Layer');
-goog.require('ol.source.Image');
 
 
 
 /**
+ * @classdesc
+ * Server-rendered images that are available for arbitrary extents and
+ * resolutions.
+ * Note that any property set in the options is set as a {@link ol.Object}
+ * property on the layer object; for example, setting `title: 'My Title'` in the
+ * options means that `title` is observable, and has get/set accessors.
+ *
  * @constructor
  * @extends {ol.layer.Layer}
- * @param {ol.layer.LayerOptions} options Layer options.
+ * @fires ol.render.Event
+ * @param {olx.layer.LayerOptions} options Layer options.
+ * @api
  */
 ol.layer.Image = function(options) {
   goog.base(this, options);
 };
 goog.inherits(ol.layer.Image, ol.layer.Layer);
-
-
-/**
- * @return {ol.source.Image} Single image source.
- */
-ol.layer.Image.prototype.getImageSource = function() {
-  return /** @type {ol.source.Image} */ (this.getSource());
-};

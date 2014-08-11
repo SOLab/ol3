@@ -1,6 +1,6 @@
 goog.require('ol.Map');
-goog.require('ol.RendererHint');
-goog.require('ol.View2D');
+goog.require('ol.View');
+goog.require('ol.control');
 goog.require('ol.layer.Tile');
 goog.require('ol.source.OSM');
 
@@ -11,24 +11,27 @@ var map = new ol.Map({
       source: new ol.source.OSM()
     })
   ],
-  renderer: ol.RendererHint.CANVAS,
   target: 'map',
-  view: new ol.View2D({
+  controls: ol.control.defaults({
+    attributionOptions: /** @type {olx.control.AttributionOptions} */ ({
+      collapsible: false
+    })
+  }),
+  view: new ol.View({
     center: [0, 0],
     zoom: 2
   })
 });
 
-var exportJPEGElement = document.getElementById('export-jpeg');
 var exportPNGElement = document.getElementById('export-png');
 
-if ('download' in exportJPEGElement && 'download' in exportPNGElement) {
-  exportJPEGElement.addEventListener('click', function(e) {
-    e.target.href = map.getRenderer().getCanvas().toDataURL('image/jpeg');
-  }, false);
-
+if ('download' in exportPNGElement) {
   exportPNGElement.addEventListener('click', function(e) {
-    e.target.href = map.getRenderer().getCanvas().toDataURL('image/png');
+    map.once('postcompose', function(event) {
+      var canvas = event.context.canvas;
+      exportPNGElement.href = canvas.toDataURL('image/png');
+    });
+    map.renderSync();
   }, false);
 } else {
   var info = document.getElementById('no-download');

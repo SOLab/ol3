@@ -1,7 +1,6 @@
 goog.require('ol');
 goog.require('ol.Map');
-goog.require('ol.RendererHints');
-goog.require('ol.View2D');
+goog.require('ol.View');
 goog.require('ol.control');
 goog.require('ol.control.Control');
 goog.require('ol.layer.Tile');
@@ -38,7 +37,7 @@ app.RotateNorthControl = function(opt_options) {
   var handleRotateNorth = function(e) {
     // prevent #rotate-north anchor from getting appended to the url
     e.preventDefault();
-    this_.getMap().getView().getView2D().setRotation(0);
+    this_.getMap().getView().setRotation(0);
   };
 
   anchor.addEventListener('click', handleRotateNorth, false);
@@ -63,7 +62,11 @@ ol.inherits(app.RotateNorthControl, ol.control.Control);
 
 
 var map = new ol.Map({
-  controls: ol.control.defaults().extend([
+  controls: ol.control.defaults({
+    attributionOptions: /** @type {olx.control.AttributionOptions} */ ({
+      collapsible: false
+    })
+  }).extend([
     new app.RotateNorthControl()
   ]),
   layers: [
@@ -71,9 +74,9 @@ var map = new ol.Map({
       source: new ol.source.OSM()
     })
   ],
-  renderers: ol.RendererHints.createFromQueryData(),
+  renderer: exampleNS.getRendererFromQueryString(),
   target: 'map',
-  view: new ol.View2D({
+  view: new ol.View({
     center: [0, 0],
     zoom: 2,
     rotation: 1

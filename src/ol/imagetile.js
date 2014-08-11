@@ -67,6 +67,7 @@ goog.inherits(ol.ImageTile, ol.Tile);
 
 /**
  * @inheritDoc
+ * @api
  */
 ol.ImageTile.prototype.getImage = function(opt_context) {
   if (goog.isDef(opt_context)) {
@@ -113,6 +114,11 @@ ol.ImageTile.prototype.handleImageError_ = function() {
  * @private
  */
 ol.ImageTile.prototype.handleImageLoad_ = function() {
+  if (!goog.isDef(this.image_.naturalWidth)) {
+    this.image_.naturalWidth = this.image_.width;
+    this.image_.naturalHeight = this.image_.height;
+  }
+
   if (this.image_.naturalWidth && this.image_.naturalHeight) {
     this.state = ol.TileState.LOADED;
   } else {

@@ -1,10 +1,9 @@
+goog.require('ol.BrowserFeature');
 goog.require('ol.Map');
-goog.require('ol.RendererHint');
-goog.require('ol.View2D');
+goog.require('ol.View');
 goog.require('ol.layer.Tile');
 goog.require('ol.proj');
 goog.require('ol.source.BingMaps');
-goog.require('ol.webgl');
 
 
 function setResetHueButtonHTML() {
@@ -16,7 +15,7 @@ function setResetSaturationButtonHTML() {
       layer.getSaturation().toFixed(2) + ')';
 }
 
-if (!ol.webgl.SUPPORTED) {
+if (!ol.BrowserFeature.HAS_WEBGL) {
   var info = document.getElementById('no-webgl');
   /**
    * display error message
@@ -25,16 +24,16 @@ if (!ol.webgl.SUPPORTED) {
 } else {
   var layer = new ol.layer.Tile({
     source: new ol.source.BingMaps({
-      key: 'Ar33pRUvQOdESG8m_T15MUmNz__E1twPo42bFx9jvdDePhX0PNgAcEm44OVTS7tt',
-      style: 'Aerial'
+      key: 'Ak-dzM4wZjSqTlzveKz5u0d4IQ4bRzVI309GxmkgSVr1ewS6iPSrOvOKhA-CJlm3',
+      imagerySet: 'Aerial'
     })
   });
 
   var map = new ol.Map({
     layers: [layer],
-    renderer: ol.RendererHint.WEBGL,
+    renderer: 'webgl',
     target: 'map',
-    view: new ol.View2D({
+    view: new ol.View({
       center: ol.proj.transform([-9.375, 51.483333], 'EPSG:4326', 'EPSG:3857'),
       zoom: 15
     })

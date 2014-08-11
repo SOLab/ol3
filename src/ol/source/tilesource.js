@@ -4,7 +4,6 @@ goog.provide('ol.source.TileOptions');
 goog.require('goog.functions');
 goog.require('ol.Attribution');
 goog.require('ol.Extent');
-goog.require('ol.Tile');
 goog.require('ol.TileCoord');
 goog.require('ol.TileRange');
 goog.require('ol.source.Source');
@@ -14,8 +13,9 @@ goog.require('ol.tilegrid.TileGrid');
 /**
  * @typedef {{attributions: (Array.<ol.Attribution>|undefined),
  *            extent: (ol.Extent|undefined),
- *            logo: (string|undefined),
+ *            logo: (string|olx.LogoOptions|undefined),
  *            opaque: (boolean|undefined),
+ *            tilePixelRatio: (number|undefined),
  *            projection: ol.proj.ProjectionLike,
  *            tileGrid: (ol.tilegrid.TileGrid|undefined)}}
  */
@@ -24,6 +24,11 @@ ol.source.TileOptions;
 
 
 /**
+ * @classdesc
+ * Abstract base class; normally only used for creating subclasses and not
+ * instantiated in apps.
+ * Base class for sources providing images divided into a tile grid.
+ *
  * @constructor
  * @extends {ol.source.Source}
  * @param {ol.source.TileOptions} options Tile source options.
@@ -42,6 +47,13 @@ ol.source.Tile = function(options) {
    * @type {boolean}
    */
   this.opaque_ = goog.isDef(options.opaque) ? options.opaque : false;
+
+  /**
+   * @private
+   * @type {number}
+   */
+  this.tilePixelRatio_ = goog.isDef(options.tilePixelRatio) ?
+      options.tilePixelRatio : 1;
 
   /**
    * @protected
@@ -105,6 +117,14 @@ ol.source.Tile.prototype.findLoadedTiles = function(loadedTilesByZ,
 
 
 /**
+ * @return {number} Gutter.
+ */
+ol.source.Tile.prototype.getGutter = function() {
+  return 0;
+};
+
+
+/**
  * @param {number} z Z.
  * @param {number} x X.
  * @param {number} y Y.
@@ -134,6 +154,7 @@ ol.source.Tile.prototype.getResolutions = function() {
  * @param {number} z Tile coordinate z.
  * @param {number} x Tile coordinate x.
  * @param {number} y Tile coordinate y.
+ * @param {number} pixelRatio Pixel ratio.
  * @param {ol.proj.Projection=} opt_projection Projection.
  * @return {!ol.Tile} Tile.
  */
@@ -142,9 +163,36 @@ ol.source.Tile.prototype.getTile = goog.abstractMethod;
 
 /**
  * @return {ol.tilegrid.TileGrid} Tile grid.
+ * @api
  */
 ol.source.Tile.prototype.getTileGrid = function() {
   return this.tileGrid;
+};
+
+
+/**
+ * @param {ol.proj.Projection} projection Projection.
+ * @return {ol.tilegrid.TileGrid} Tile grid.
+ */
+ol.source.Tile.prototype.getTileGridForProjection = function(projection) {
+  if (goog.isNull(this.tileGrid)) {
+    return ol.tilegrid.getForProjection(projection);
+  } else {
+    return this.tileGrid;
+  }
+};
+
+
+/**
+ * @param {number} z Z.
+ * @param {number} pixelRatio Pixel ratio.
+ * @param {ol.proj.Projection} projection Projection.
+ * @return {number} Tile size.
+ */
+ol.source.Tile.prototype.getTilePixelSize =
+    function(z, pixelRatio, projection) {
+  var tileGrid = this.getTileGridForProjection(projection);
+  return tileGrid.getTileSize(z) * this.tilePixelRatio_;
 };
 
 

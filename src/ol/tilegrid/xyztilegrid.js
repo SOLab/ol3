@@ -1,6 +1,7 @@
 goog.provide('ol.tilegrid.XYZ');
 
 goog.require('goog.math');
+goog.require('ol');
 goog.require('ol.TileCoord');
 goog.require('ol.TileRange');
 goog.require('ol.proj');
@@ -10,9 +11,14 @@ goog.require('ol.tilegrid.TileGrid');
 
 
 /**
+ * @classdesc
+ * Set the grid pattern for sources accessing XYZ tiled-image servers.
+ *
  * @constructor
  * @extends {ol.tilegrid.TileGrid}
- * @param {ol.tilegrid.XYZOptions} options XYZ options.
+ * @param {olx.tilegrid.XYZOptions} options XYZ options.
+ * @struct
+ * @api
  */
 ol.tilegrid.XYZ = function(options) {
 
@@ -27,7 +33,7 @@ ol.tilegrid.XYZ = function(options) {
     minZoom: options.minZoom,
     origin: [-ol.proj.EPSG3857.HALF_SIZE, ol.proj.EPSG3857.HALF_SIZE],
     resolutions: resolutions,
-    tileSize: [ol.DEFAULT_TILE_SIZE, ol.DEFAULT_TILE_SIZE]
+    tileSize: ol.DEFAULT_TILE_SIZE
   });
 
 };
@@ -87,14 +93,7 @@ ol.tilegrid.XYZ.prototype.createTileCoordTransform = function(opt_options) {
             return null;
           }
         }
-        if (goog.isDef(opt_tileCoord)) {
-          opt_tileCoord.z = z;
-          opt_tileCoord.x = x;
-          opt_tileCoord.y = -y - 1;
-          return opt_tileCoord;
-        } else {
-          return new ol.TileCoord(z, x, -y - 1);
-        }
+        return ol.TileCoord.createOrUpdate(z, x, -y - 1, opt_tileCoord);
       });
 };
 
@@ -119,14 +118,14 @@ ol.tilegrid.XYZ.prototype.getTileCoordChildTileRange =
  * @inheritDoc
  */
 ol.tilegrid.XYZ.prototype.forEachTileCoordParentTileRange =
-    function(tileCoord, callback, opt_obj, opt_tileRange) {
+    function(tileCoord, callback, opt_this, opt_tileRange) {
   var tileRange = ol.TileRange.createOrUpdate(
       0, tileCoord.x, 0, tileCoord.y, opt_tileRange);
   var z;
   for (z = tileCoord.z - 1; z >= this.minZoom; --z) {
     tileRange.minX = tileRange.maxX >>= 1;
     tileRange.minY = tileRange.maxY >>= 1;
-    if (callback.call(opt_obj, z, tileRange)) {
+    if (callback.call(opt_this, z, tileRange)) {
       return true;
     }
   }
