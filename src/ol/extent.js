@@ -1,11 +1,7 @@
 goog.provide('ol.Extent');
 goog.provide('ol.extent');
-<<<<<<< HEAD
 goog.provide('ol.extent.Corner');
-=======
 goog.provide('ol.extent.Relationship');
->>>>>>> master
-
 goog.require('goog.asserts');
 goog.require('goog.vec.Mat4');
 goog.require('ol.Coordinate');
@@ -472,7 +468,6 @@ ol.extent.getCenter = function(extent) {
 
 
 /**
-<<<<<<< HEAD
  * Get a corner coordinate of an extent.
  * @param {ol.Extent} extent Extent.
  * @param {ol.extent.Corner} corner Corner.
@@ -493,7 +488,10 @@ ol.extent.getCorner = function(extent, corner) {
   }
   goog.asserts.assert(goog.isDef(coordinate));
   return coordinate;
-=======
+}
+
+
+/**
  * @param {ol.Extent} extent1 Extent 1.
  * @param {ol.Extent} extent2 Extent 2.
  * @return {number} Enlarged area.
@@ -504,7 +502,6 @@ ol.extent.getEnlargedArea = function(extent1, extent2) {
   var maxX = Math.max(extent1[2], extent2[2]);
   var maxY = Math.max(extent1[3], extent2[3]);
   return (maxX - minX) * (maxY - minY);
->>>>>>> master
 };
 
 

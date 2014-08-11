@@ -161,52 +161,48 @@ describe('ol.tilegrid.TileGrid', function() {
     });
   });
 
-  describe('createForExtent', function() {
+  describe('createOptionsForExtent', function() {
     it('allows creation of tile grid from extent', function() {
-      var extent = ol.extent.createOrUpdate(-100, 100, -100, 100);
-      var grid = ol.tilegrid.createForExtent(extent);
-      expect(grid).to.be.a(ol.tilegrid.TileGrid);
+      var extent = ol.extent.createOrUpdate(-100, -100, 100, 100);
+      var grid = ol.tilegrid.createOptionsForExtent(extent);
 
-      var resolutions = grid.getResolutions();
+      var resolutions = grid.resolutions;
       expect(resolutions.length).to.be(ol.DEFAULT_MAX_ZOOM + 1);
-      expect(grid.getOrigin()).to.eql([-100, -100]);
+      expect(grid.origin).to.eql([-100, -100]);
     });
   });
 
-  describe('createForProjection', function() {
+  describe('createOptionsForProjection', function() {
 
     it('allows easier creation of a tile grid', function() {
       var projection = ol.proj.get('EPSG:3857');
-      var grid = ol.tilegrid.createForProjection(projection);
-      expect(grid).to.be.a(ol.tilegrid.TileGrid);
+      var grid = ol.tilegrid.createOptionsForProjection(projection);
 
-      var resolutions = grid.getResolutions();
+      var resolutions = grid.resolutions;
       expect(resolutions.length).to.be(ol.DEFAULT_MAX_ZOOM + 1);
     });
 
     it('accepts a number of zoom levels', function() {
       var projection = ol.proj.get('EPSG:3857');
-      var grid = ol.tilegrid.createForProjection(projection, 18);
-      expect(grid).to.be.a(ol.tilegrid.TileGrid);
+      var grid = ol.tilegrid.createOptionsForProjection(projection, 18);
 
-      var resolutions = grid.getResolutions();
+      var resolutions = grid.resolutions;
       expect(resolutions.length).to.be(19);
     });
 
     it('accepts a big number of zoom levels', function() {
       var projection = ol.proj.get('EPSG:3857');
-      var grid = ol.tilegrid.createForProjection(projection, 23);
-      expect(grid).to.be.a(ol.tilegrid.TileGrid);
+      var grid = ol.tilegrid.createOptionsForProjection(projection, 23);
 
-      var resolutions = grid.getResolutions();
+      var resolutions = grid.resolutions;
       expect(resolutions.length).to.be(24);
     });
 
     it('works for projections unknown to the client', function() {
       var projection = new ol.proj.Projection(
           {code: 'EPSG:31287', units: 'm'});
-      var grid = ol.tilegrid.createForProjection(projection);
-      var resolutions = grid.getResolutions();
+      var grid = ol.tilegrid.createOptionsForProjection(projection);
+      var resolutions = grid.resolutions;
       expect(resolutions[5]).to.be(
           360 * ol.proj.METERS_PER_UNIT[ol.proj.Units.DEGREES] /
           ol.DEFAULT_TILE_SIZE / Math.pow(2, 5));
@@ -214,44 +210,45 @@ describe('ol.tilegrid.TileGrid', function() {
 
     it('assumes origin is bottom-left', function() {
       var projection = ol.proj.get('EPSG:3857');
-      var grid = ol.tilegrid.createForProjection(projection);
-      var origin = grid.getOrigin();
+      var grid = ol.tilegrid.createOptionsForProjection(projection);
+      var resolutions = grid.resolutions;
+      var origin = grid.origin;
       var half = ol.proj.EPSG3857.HALF_SIZE;
       expect(origin).to.eql([-half, -half]);
     });
 
     it('accepts bottom-left as corner', function() {
       var projection = ol.proj.get('EPSG:3857');
-      var grid = ol.tilegrid.createForProjection(
+      var grid = ol.tilegrid.createOptionsForProjection(
           projection, undefined, undefined, ol.extent.Corner.BOTTOM_LEFT);
-      var origin = grid.getOrigin();
+      var origin = grid.origin;
       var half = ol.proj.EPSG3857.HALF_SIZE;
       expect(origin).to.eql([-half, -half]);
     });
 
     it('accepts bottom-right as corner', function() {
       var projection = ol.proj.get('EPSG:3857');
-      var grid = ol.tilegrid.createForProjection(
+      var grid = ol.tilegrid.createOptionsForProjection(
           projection, undefined, undefined, ol.extent.Corner.BOTTOM_RIGHT);
-      var origin = grid.getOrigin();
+      var origin = grid.origin;
       var half = ol.proj.EPSG3857.HALF_SIZE;
       expect(origin).to.eql([half, -half]);
     });
 
     it('accepts top-left as corner', function() {
       var projection = ol.proj.get('EPSG:3857');
-      var grid = ol.tilegrid.createForProjection(
+      var grid = ol.tilegrid.createOptionsForProjection(
           projection, undefined, undefined, ol.extent.Corner.TOP_LEFT);
-      var origin = grid.getOrigin();
+      var origin = grid.origin;
       var half = ol.proj.EPSG3857.HALF_SIZE;
       expect(origin).to.eql([-half, half]);
     });
 
     it('accepts top-right as corner', function() {
       var projection = ol.proj.get('EPSG:3857');
-      var grid = ol.tilegrid.createForProjection(
+      var grid = ol.tilegrid.createOptionsForProjection(
           projection, undefined, undefined, ol.extent.Corner.TOP_RIGHT);
-      var origin = grid.getOrigin();
+      var origin = grid.origin;
       var half = ol.proj.EPSG3857.HALF_SIZE;
       expect(origin).to.eql([half, half]);
     });
@@ -703,11 +700,8 @@ goog.require('ol.TileCoord');
 goog.require('ol.extent');
 goog.require('ol.extent.Corner');
 goog.require('ol.proj');
-<<<<<<< HEAD
 goog.require('ol.proj.EPSG3857');
-=======
 goog.require('ol.proj.METERS_PER_UNIT');
->>>>>>> master
 goog.require('ol.proj.Projection');
 goog.require('ol.proj.Units');
 goog.require('ol.tilegrid.TileGrid');
