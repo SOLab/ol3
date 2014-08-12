@@ -413,7 +413,7 @@ ol.tilegrid.getForProjection = function(projection) {
  * @return {olx.tilegrid.TileGridOptions} TileGrid instance.
  */
 ol.tilegrid.createOptionsForExtent =
-    function(extent, opt_maxZoom, opt_tileSize, opt_corner) {
+    function(extent, opt_resolutions, opt_maxZoom, opt_tileSize, opt_corner) {
   var maxZoom = goog.isDef(opt_maxZoom) ?
       opt_maxZoom : ol.DEFAULT_MAX_ZOOM;
 
@@ -429,9 +429,14 @@ ol.tilegrid.createOptionsForExtent =
   var maxResolution = extentWidth / tileSize;
 
   /** @type {Array.<number>} */
-  var resolutions = new Array(maxZoom + 1);
-  for (var z = 0, zz = resolutions.length; z < zz; ++z) {
-    resolutions[z] = maxResolution / Math.pow(2, z);
+  var resolutions;
+  if(goog.isDef(opt_resolutions)) {
+    resolutions = opt_resolutions;
+  } else {
+     resolutions = new Array(maxZoom + 1);
+    for (var z = 0, zz = resolutions.length; z < zz; ++z) {
+      resolutions[z] = maxResolution / Math.pow(2, z);
+    }
   }
   return {
     origin: ol.extent.getCorner(extent, corner),
@@ -451,7 +456,7 @@ ol.tilegrid.createOptionsForExtent =
  * @return {olx.tilegrid.TileGridOptions} TileGrid instance.
  */
 ol.tilegrid.createOptionsForProjection =
-    function(projection, opt_maxZoom, opt_tileSize, opt_corner) {
+    function(projection, opt_resolutions, opt_maxZoom, opt_tileSize, opt_corner) {
   var extent = projection.getExtent();
   if (goog.isNull(extent)) {
     var half = 180 * ol.proj.METERS_PER_UNIT[ol.proj.Units.DEGREES] /
@@ -459,5 +464,5 @@ ol.tilegrid.createOptionsForProjection =
     extent = ol.extent.createOrUpdate(-half, -half, half, half);
   }
   return ol.tilegrid.createOptionsForExtent(
-    extent, opt_maxZoom, opt_tileSize, opt_corner);
+    extent, opt_resolutions, opt_maxZoom, opt_tileSize, opt_corner);
 };

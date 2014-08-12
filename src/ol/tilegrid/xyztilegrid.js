@@ -29,6 +29,17 @@ ol.tilegrid.XYZ = function(options) {
     resolutions[z] = size / Math.pow(2, z);
   }
 
+  var baseOptions = {
+    minZoom: options.minZoom,
+    origin: [-ol.proj.EPSG3857.HALF_SIZE, ol.proj.EPSG3857.HALF_SIZE],
+    resolutions: resolutions,
+    tileSize: ol.DEFAULT_TILE_SIZE
+  };
+
+  if(options.projection) {
+    baseOptions = ol.tilegrid.createOptionsForProjection(options.projection);
+  }
+
   goog.base(this, {
     minZoom: options.minZoom,
     origin: [-ol.proj.EPSG3857.HALF_SIZE, ol.proj.EPSG3857.HALF_SIZE],
