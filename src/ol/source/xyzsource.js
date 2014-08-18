@@ -24,7 +24,10 @@ ol.source.XYZ = function(options) {
   var maxZoom = goog.isDef(options.maxZoom) ? options.maxZoom : 18;
 
   var tileGrid = new ol.tilegrid.XYZ({
-    maxZoom: maxZoom
+    maxZoom: maxZoom,
+    projection: options.projection,
+    resolutions: options.resolutions,
+    origin: options.origin
   });
 
   goog.base(this, {

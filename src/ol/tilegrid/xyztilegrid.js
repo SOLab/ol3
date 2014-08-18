@@ -23,15 +23,32 @@ goog.require('ol.tilegrid.TileGrid');
 ol.tilegrid.XYZ = function(options) {
 
   var resolutions = new Array(options.maxZoom + 1);
-  var z;
-  var size = 2 * ol.proj.EPSG3857.HALF_SIZE / ol.DEFAULT_TILE_SIZE;
-  for (z = 0; z <= options.maxZoom; ++z) {
-    resolutions[z] = size / Math.pow(2, z);
+  var z, halfSize, origin;
+  if(options.projection) {
+    halfSize = ol.extent.getWidth(options.projection.getExtent()) / 2;
+  } else {
+    halfSize = ol.proj.EPSG3857.HALF_SIZE;
+  }
+
+  if(options.resolutions) {
+    resolutions = options.resolutions;
+  }
+  else {
+    var size = 2 * halfSize / ol.DEFAULT_TILE_SIZE;
+    for (z = 0; z <= options.maxZoom; ++z) {
+      resolutions[z] = size / Math.pow(2, z);
+    }
+  }
+
+  if(options.origin) {
+    origin = options.origin;
+  } else {
+    origin = [-halfSize, halfSize];
   }
 
   goog.base(this, {
     minZoom: options.minZoom,
-    origin: [-ol.proj.EPSG3857.HALF_SIZE, ol.proj.EPSG3857.HALF_SIZE],
+    origin: origin,
     resolutions: resolutions,
     tileSize: ol.DEFAULT_TILE_SIZE
   });
