@@ -225,6 +225,14 @@ ol.tilegrid.TileGrid.prototype.getTileRangeExtent =
 
 
 /**
+ * @param {Array.[number]} resolutions
+ */
+ol.tilegrid.TileGrid.prototype.setResoulutions = function(resolutions) {
+  this.resolutions_ = resolutions;
+};
+
+
+/**
  * @param {ol.Extent} extent Extent.
  * @param {number} resolution Resolution.
  * @param {ol.TileRange=} opt_tileRange Temporary tile range object.
