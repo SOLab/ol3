@@ -26,12 +26,16 @@ goog.require('ol.tilegrid.TileGrid');
 ol.tilegrid.XYZ = function(options) {
   var extent = goog.isDef(options.extent) ?
       options.extent : ol.proj.EPSG3857.EXTENT;
-  var resolutions = ol.tilegrid.resolutionsFromExtent(
+  var resolutions = goog.isDef(options.resolutions) ? options.resolutions :
+    ol.tilegrid.resolutionsFromExtent(
       extent, options.maxZoom, options.tileSize);
+
+  var origin = goog.isDef(options.origin) ? options.origin :
+    ol.extent.getCorner(extent, ol.extent.Corner.TOP_LEFT);
 
   goog.base(this, {
     minZoom: options.minZoom,
-    origin: ol.extent.getCorner(extent, ol.extent.Corner.TOP_LEFT),
+    origin: origin,
     resolutions: resolutions,
     tileSize: options.tileSize
   });

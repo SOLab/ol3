@@ -23,7 +23,9 @@ ol.source.XYZ = function(options) {
   var tileGrid = new ol.tilegrid.XYZ({
     extent: ol.tilegrid.extentFromProjection(projection),
     maxZoom: options.maxZoom,
-    tileSize: options.tileSize
+    tileSize: options.tileSize,
+    resolutions: options.resolutions,
+    origin: options.origin
   });
 
   goog.base(this, {
